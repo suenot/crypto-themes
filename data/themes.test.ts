@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { ThemeLogo } from './catalog';
 import themes from './themes.json';
 
-const agentSource = new URL('../../agent/src/theme.ts', import.meta.url);
 const iconsCatalog = new URL('../../icons/data/exchanges.json', import.meta.url);
 
 test('lists the nine themes in source order with unique slug IDs', () => {
@@ -42,17 +41,6 @@ test('gives every theme a complete style token set', () => {
     expect(style.space).toBeGreaterThanOrEqual(2);
     expect(style.space).toBeLessThanOrEqual(8);
   }
-});
-
-test.skipIf(!existsSync(agentSource))('matches the light and dark colors in the agent source', () => {
-  const source = readFileSync(agentSource, 'utf8');
-  const entries = source.matchAll(/\{\s*id:\s*'([a-z0-9]+)'[^{}]*?\blight:\s*\[([^\]]*)\][^{}]*?\bdark:\s*\[([^\]]*)\]/g);
-  const palettes = Array.from(entries, ([, id, light, dark]) => ({
-    id,
-    light: Array.from(light.matchAll(/'([^']*)'/g), ([, color]) => color),
-    dark: Array.from(dark.matchAll(/'([^']*)'/g), ([, color]) => color),
-  }));
-  expect(themes.map(({ id, light, dark }) => ({ id, light, dark }))).toEqual(palettes);
 });
 
 test('provides logos for Binance and Bybit only', () => {

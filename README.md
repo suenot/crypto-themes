@@ -1,6 +1,6 @@
 # Crypto Themes
 
-A catalog of UI themes for exchanges and products at [themes.marketmaker.cc](https://themes.marketmaker.cc). A theme is a full token set: light and dark colors, fonts, display type, corner radii and spacing. The nine themes come from `trading/agent/src/theme.ts` (colors) and `trading/agent/src/style.css` (fonts, weights, radii). Spacing is set by this catalog, because the agent app has no spacing tokens. The agent app should read from this catalog in the future.
+A catalog of UI themes for exchanges and products at [themes.marketmaker.cc](https://themes.marketmaker.cc). A theme is a full token set: light and dark colors, fonts, display type, corner radii and spacing. This catalog is the single source of truth for the themes. The agent app (`trading/agent`) links `/css/all.css`, reads `/index/themes.json` and derives its other tokens from the four colors; it keeps no theme data of its own.
 
 ## Get started
 
@@ -35,7 +35,7 @@ The site loads Geist, Inter, IBM Plex Sans, Roboto and Source Serif 4 through `@
 
 All catalog endpoints allow cross-origin requests with `Access-Control-Allow-Origin: *`. Select a theme with `data-theme="<id>"` on the root element and set `data-mode="dark"` to use its dark colors.
 
-To add a theme, edit `data/themes.json`, update the expected IDs in `data/themes.test.ts`, and run `bun test`. If the sibling agent checkout is present, the tests also compare the catalog with its palettes.
+To add a theme, edit `data/themes.json`, update the expected IDs in `data/themes.test.ts`, and run `bun test`.
 
 For a theme with a matching logo, use the original at `https://logos.marketmaker.cc/exchange-logos/<file>` or the thumbnail at `https://logos.marketmaker.cc/exchange-logos/sm/<slug>.webp`. Keep both images hosted on the logos service.
 
