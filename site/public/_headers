@@ -1,0 +1,6 @@
+/index/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
+/css/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300

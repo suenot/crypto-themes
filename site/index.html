@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0b0d" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="description" content="UI color themes for trading products: exchange and terminal palettes with light and dark modes, live preview, and CSS, JSON and Tailwind export." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Trading themes: exchange and product palettes" />
+    <meta property="og:description" content="Nine UI themes with light and dark palettes. Preview, copy CSS variables, JSON or a Tailwind config." />
+    <meta property="og:url" content="https://themes.marketmaker.cc/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Trading themes: exchange and product palettes</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
