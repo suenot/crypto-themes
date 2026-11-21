@@ -7,63 +7,50 @@ import { defineConfig, type Plugin } from 'vite';
 import type { Theme } from '../data/catalog';
 import { cssFile } from './src/lib/formats';
 
-const siteDirectory = fileURLToPath(new URL('.', import.meta.url));
-const themesPath = path.resolve(siteDirectory, '../data/themes.json');
+const root = fileURLToPath(new URL('.', import.meta.url));
+const themesPath = path.resolve(root, '../data/themes.json');
 
-async function themeAssets(): Promise<Map<string, string>> {
+/** Every generated file by its public path: the catalog index and one stylesheet per theme. */
+async function generated(): Promise<Map<string, string>> {
   const themes: Theme[] = JSON.parse(await readFile(themesPath, 'utf8'));
-  const styles = themes.map(theme => [`css/${theme.id}.css`, cssFile(theme)] as const);
+  const sheets = themes.map((theme) => [`css/${theme.id}.css`, cssFile(theme)] as const);
   return new Map([
     ['index/themes.json', JSON.stringify(themes)],
-    ...styles,
-    ['css/all.css', styles.map(([, css]) => css).join('\n')],
+    ...sheets,
+    ['css/all.css', sheets.map(([, css]) => css).join('\n')],
   ]);
 }
 
 type Next = (error?: unknown) => void;
 
-async function serveThemeAssets(request: IncomingMessage, response: ServerResponse, next: Next) {
-  const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
-  const isIndex = pathname === '/index/themes.json';
-  const isCss = /^\/css\/[a-z0-9]+\.css$/.test(pathname);
-  if ((!isIndex && !isCss) || (request.method !== 'GET' && request.method !== 'HEAD')) {
-    next();
-    return;
-  }
+async function serve(request: IncomingMessage, response: ServerResponse, next: Next) {
+  const { pathname } = new URL(request.url ?? '/', 'http://localhost');
+  if (!/^\/(index\/themes\.json|css\/[a-z0-9]+\.css)$/.test(pathname) || (request.method !== 'GET' && request.method !== 'HEAD')) return next();
   try {
-    const source = (await themeAssets()).get(pathname.slice(1));
-    if (source === undefined) {
-      next();
-      return;
-    }
-    response.setHeader('Content-Type', isIndex ? 'application/json; charset=utf-8' : 'text/css; charset=utf-8');
+    const body = (await generated()).get(pathname.slice(1));
+    if (body === undefined) return next();
+    response.setHeader('Content-Type', pathname.endsWith('.json') ? 'application/json; charset=utf-8' : 'text/css; charset=utf-8');
     response.setHeader('Access-Control-Allow-Origin', '*');
-    response.end(request.method === 'HEAD' ? undefined : source);
+    response.end(request.method === 'HEAD' ? undefined : body);
   } catch (error) {
     next(error);
   }
 }
 
-function themeData(): Plugin {
+function themeFiles(): Plugin {
   return {
-    name: 'theme-data',
+    name: 'theme-files',
     async generateBundle() {
-      for (const [fileName, source] of await themeAssets()) {
-        this.emitFile({ type: 'asset', fileName, source });
-      }
+      for (const [fileName, source] of await generated()) this.emitFile({ type: 'asset', fileName, source });
     },
-    configureServer(server) {
-      server.middlewares.use(serveThemeAssets);
-    },
-    configurePreviewServer(server) {
-      server.middlewares.use(serveThemeAssets);
-    },
+    configureServer: (server) => void server.middlewares.use(serve),
+    configurePreviewServer: (server) => void server.middlewares.use(serve),
   };
 }
 
 export default defineConfig({
-  root: siteDirectory,
-  plugins: [solid(), themeData()],
-  build: { outDir: path.join(siteDirectory, 'dist'), emptyOutDir: true },
+  root,
+  plugins: [solid(), themeFiles()],
+  build: { outDir: path.join(root, 'dist'), emptyOutDir: true },
   server: { host: '127.0.0.1' },
 });
