@@ -1,9 +1,23 @@
 import { expect, test } from 'bun:test';
 import type { Theme } from '../../../data/catalog';
 import themes from '../../../data/themes.json';
-import { accentInk, contrast, cssFile, cssVars, tailwindConfig, themeJson } from './formats';
+import { accentInk, contrast, cssFile, cssTokens, cssVars, tailwindConfig, themeJson } from './formats';
 
 const binance = themes.find(theme => theme.id === 'binance') as Theme;
+
+const tokensCss = `:root[data-theme="binance"] {
+  --font: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-num: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --display-weight: 600;
+  --display-tracking: -0.02em;
+  --display-transform: none;
+  --r-card: 12px;
+  --r-ctl: 8px;
+  --r-btn: 8px;
+  --space: 4px;
+}`;
 
 const lightCss = `:root[data-theme="binance"] {
   color-scheme: light;
@@ -29,8 +43,17 @@ test('formats the CSS variables for each mode and defaults to dark', () => {
   expect(cssVars(binance)).toBe(darkCss);
 });
 
-test('formats the CSS file with a comment and the light block first', () => {
-  expect(cssFile(binance)).toBe(`/* Binance: Yellow on graphite, dense terminal */\n${lightCss}\n\n${darkCss}\n`);
+test('formats the non-color tokens', () => {
+  expect(cssTokens(binance)).toBe(tokensCss);
+});
+
+test('writes pill radii as 999px', () => {
+  const marketmaker = themes.find(theme => theme.id === 'marketmaker') as Theme;
+  expect(cssTokens(marketmaker)).toContain('--r-btn: 999px;');
+});
+
+test('formats the CSS file with a comment, tokens, then light and dark blocks', () => {
+  expect(cssFile(binance)).toBe(`/* Binance: Yellow on graphite, dense terminal */\n${tokensCss}\n\n${lightCss}\n\n${darkCss}\n`);
 });
 
 test('formats the Tailwind configuration', () => {
@@ -45,6 +68,20 @@ export default {
         accent: 'var(--accent)',
         'accent-ink': 'var(--accent-ink)',
         text: 'var(--text)',
+      },
+      fontFamily: {
+        sans: 'var(--font)',
+        display: 'var(--font-display)',
+        mono: 'var(--font-mono)',
+        num: 'var(--font-num)',
+      },
+      borderRadius: {
+        card: 'var(--r-card)',
+        ctl: 'var(--r-ctl)',
+        btn: 'var(--r-btn)',
+      },
+      spacing: {
+        step: 'var(--space)',
       },
     },
   },

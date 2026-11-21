@@ -46,9 +46,31 @@ export function cssVars(theme: Theme, mode: Mode = 'dark'): string {
   ].join('\n');
 }
 
-/** Stylesheet with both modes, light first. */
+const px = (value: number) => (value >= 999 ? '999px' : `${value}px`);
+
+/** Non-color tokens: fonts, display type, radii and spacing. Same in both modes. */
+export function cssTokens(theme: Theme): string {
+  const s = theme.style;
+  return [
+    `:root[data-theme="${theme.id}"] {`,
+    `  --font: ${s.font};`,
+    `  --font-display: ${s.fontDisplay};`,
+    `  --font-mono: ${s.fontMono};`,
+    `  --font-num: ${s.fontNum};`,
+    `  --display-weight: ${s.displayWeight};`,
+    `  --display-tracking: ${s.displayTracking};`,
+    `  --display-transform: ${s.displayTransform};`,
+    `  --r-card: ${px(s.radiusCard)};`,
+    `  --r-ctl: ${px(s.radiusControl)};`,
+    `  --r-btn: ${px(s.radiusButton)};`,
+    `  --space: ${s.space}px;`,
+    '}',
+  ].join('\n');
+}
+
+/** Stylesheet: tokens, then light, then dark. */
 export function cssFile(theme: Theme): string {
-  return `/* ${theme.name}: ${theme.note} */\n${cssVars(theme, 'light')}\n\n${cssVars(theme, 'dark')}\n`;
+  return `/* ${theme.name}: ${theme.note} */\n${cssTokens(theme)}\n\n${cssVars(theme, 'light')}\n\n${cssVars(theme, 'dark')}\n`;
 }
 
 /** The theme as a user would paste it: no logo, no Russian note. */
@@ -69,6 +91,20 @@ export default {
         accent: 'var(--accent)',
         'accent-ink': 'var(--accent-ink)',
         text: 'var(--text)',
+      },
+      fontFamily: {
+        sans: 'var(--font)',
+        display: 'var(--font-display)',
+        mono: 'var(--font-mono)',
+        num: 'var(--font-num)',
+      },
+      borderRadius: {
+        card: 'var(--r-card)',
+        ctl: 'var(--r-ctl)',
+        btn: 'var(--r-btn)',
+      },
+      spacing: {
+        step: 'var(--space)',
       },
     },
   },

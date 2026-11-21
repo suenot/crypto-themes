@@ -14,10 +14,20 @@ type Kind = 'all' | Theme['kind'];
 const logoUrl = (theme: Theme, small: boolean) =>
   theme.logo ? `${LOGOS}/exchange-logos/${small ? 'sm/' : ''}${encodeURIComponent(small ? theme.logo.sm : theme.logo.file)}` : '';
 
-/** Scopes one theme palette to an element through the same variables a real app would use. */
+const px = (value: number) => (value >= 999 ? '999px' : `${value}px`);
+/** First family of a font stack, for display. */
+const family = (stack: string) => (stack.match(/^'([^']+?)(?: Variable)?'/)?.[1] ?? (stack.startsWith('ui-monospace') ? 'System mono' : 'System UI'));
+
+/** Scopes one theme (colors, type, radii, spacing) to an element through the same variables a real app would use. */
 function vars(theme: Theme, mode: Mode): JSX.CSSProperties {
   const [bg, surface, accent, text] = theme[mode];
-  return { '--bg': bg, '--surface': surface, '--accent': accent, '--accent-ink': accentInk(accent), '--text': text } as JSX.CSSProperties;
+  const s = theme.style;
+  return {
+    '--bg': bg, '--surface': surface, '--accent': accent, '--accent-ink': accentInk(accent), '--text': text,
+    '--font': s.font, '--font-display': s.fontDisplay, '--font-mono': s.fontMono, '--font-num': s.fontNum,
+    '--display-weight': String(s.displayWeight), '--display-tracking': s.displayTracking, '--display-transform': s.displayTransform,
+    '--r-card': px(s.radiusCard), '--r-ctl': px(s.radiusControl), '--r-btn': px(s.radiusButton), '--space': `${s.space}px`,
+  } as JSX.CSSProperties;
 }
 
 const Svg = (props: { d: string }) => (
@@ -79,12 +89,13 @@ function Terminal(props: { theme: Theme; mode: Mode }) {
 function App() {
   const fromHash = () => themes.find((item) => item.id === location.hash.slice(1))?.id ?? 'marketmaker';
   const [themeId, setThemeId] = createSignal(fromHash());
-  const [previewMode, setPreviewMode] = createSignal<Mode>('dark');
   const [kind, setKind] = createSignal<Kind>('all');
   const [format, setFormat] = createSignal<Format>('css');
   const [sheetOpen, setSheetOpen] = createSignal(false);
   const [feedback, setFeedback] = createSignal('');
   const [light, setLight] = createSignal(false);
+  // The preview follows the site theme toggle in the nav.
+  const previewMode = (): Mode => (light() ? 'light' : 'dark');
   const [stuck, setStuck] = createSignal(false);
   const [typed, setTyped] = createSignal('');
   let feedbackTimer = 0;
@@ -93,6 +104,21 @@ function App() {
   const shown = createMemo(() => themes.filter((item) => kind() === 'all' || item.kind === kind()));
   const palette = createMemo(() => theme()[previewMode()]);
   const code = createMemo(() => (format() === 'css' ? cssFile(theme()) : format() === 'json' ? themeJson(theme()) : tailwindConfig(theme())));
+  const tokens = createMemo((): [string, string, string][] => {
+    const s = theme().style;
+    return [
+      ['Body', family(s.font), '--font'],
+      ['Display', family(s.fontDisplay), '--font-display'],
+      ['Numbers', family(s.fontNum), '--font-num'],
+      ['Mono', family(s.fontMono), '--font-mono'],
+      ['Weight', `${s.displayWeight}${s.displayTransform === 'uppercase' ? ', caps' : ''}`, '--display-weight'],
+      ['Tracking', s.displayTracking, '--display-tracking'],
+      ['Card radius', px(s.radiusCard), '--r-card'],
+      ['Control radius', px(s.radiusControl), '--r-ctl'],
+      ['Button radius', s.radiusButton >= 999 ? 'pill' : px(s.radiusButton), '--r-btn'],
+      ['Spacing step', `${s.space}px`, '--space'],
+    ];
+  });
   const cssUrl = () => `${HOST}/css/${theme().id}.css`;
 
   createEffect(() => {
@@ -153,13 +179,11 @@ function App() {
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem('theme', next); } catch { /* storage unavailable */ }
     setLight(next === 'light');
-    setPreviewMode(next);
   }
 
   onMount(() => {
     const current = document.documentElement.dataset.theme === 'light';
     setLight(current);
-    setPreviewMode(current ? 'light' : 'dark');
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setSheetOpen(false); };
     const onScroll = () => setStuck(window.scrollY > 8);
     const onHash = () => setThemeId(fromHash());
@@ -215,7 +239,7 @@ function App() {
             <div class="hero-text">
               <p class="host mono" aria-hidden="true">themes.marketmaker.cc</p>
               <p class="path mono" aria-hidden="true"><span class="path-fixed">/css/</span><span class="path-slot">{typed()}</span><span class="caret" /></p>
-              <p class="lede">Exchange and product palettes in one catalog. Preview each in light and dark, then copy the CSS variables, JSON or Tailwind config.</p>
+              <p class="lede">Exchange and product themes in one catalog: colors, fonts, corner radii and spacing. Preview each, then copy the CSS variables, JSON or Tailwind config. The light and dark switch in the header changes every preview.</p>
               <div class="cta">
                 <a class="btn btn--primary" href="#browse">Browse themes</a>
                 <a class="btn btn--ghost" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
@@ -223,14 +247,14 @@ function App() {
               <dl class="facts mono">
                 <div><dt class="sr">Themes</dt><dd><b>{themes.length}</b> themes</dd></div>
                 <div><dt class="sr">Modes</dt><dd>light + dark</dd></div>
-                <div><dt class="sr">Tokens</dt><dd>bg, surface, accent, text</dd></div>
+                <div><dt class="sr">Tokens</dt><dd>color, type, radius, space</dd></div>
               </dl>
             </div>
             <div class="ribbon" aria-hidden="true">
               <For each={themes}>{(item) => (
                 <button class="ribbon-row" type="button" tabIndex={-1} data-active={item.id === themeId()} onClick={() => pick(item.id, false)}>
                   <span class="ribbon-bars">
-                    <For each={item.dark}>{(color) => <i style={{ background: color }} />}</For>
+                    <For each={item[previewMode()]}>{(color) => <i style={{ background: color }} />}</For>
                   </span>
                   <span class="mono">{item.id}</span>
                 </button>
@@ -246,13 +270,9 @@ function App() {
               <div class="chips" role="group" aria-label="Theme type">
                 <For each={kinds}>{([id, text]) => <button class="chip" type="button" aria-pressed={kind() === id} onClick={() => setKind(id)}>{text}</button>}</For>
               </div>
-              <div class="chips" role="group" aria-label="Preview mode">
-                <button class="chip" type="button" aria-pressed={previewMode() === 'light'} onClick={() => setPreviewMode('light')}>Light</button>
-                <button class="chip" type="button" aria-pressed={previewMode() === 'dark'} onClick={() => setPreviewMode('dark')}>Dark</button>
-              </div>
             </div>
           </div>
-          <p class="count mono" role="status" aria-live="polite">{shown().length} of {themes.length} themes, {previewMode()} palette</p>
+          <p class="count mono" role="status" aria-live="polite">{shown().length} of {themes.length} themes</p>
 
           <div class="layout">
             <ul class="cards">
@@ -296,6 +316,20 @@ function App() {
                 text on bg {contrast(palette()[3], palette()[0]).toFixed(1)}:1, ink on accent {contrast(accentInk(palette()[2]), palette()[2]).toFixed(1)}:1
               </p>
 
+              <div class="type" style={vars(theme(), previewMode())}>
+                <p class="type-display">Order book</p>
+                <p class="type-num">97,412.50</p>
+                <p class="type-body">Body text sets the pace of a screen.</p>
+              </div>
+              <dl class="tokens">
+                <For each={tokens()}>{([label, value, name]) => (
+                  <button class="token" type="button" onClick={() => void copy(`${name}: ${value}`, name)} title={`Copy ${name}: ${value}`}>
+                    <dt>{label}</dt>
+                    <dd class="mono">{value}</dd>
+                  </button>
+                )}</For>
+              </dl>
+
               <div class="snip">
                 <div class="chips" role="group" aria-label="Export format">
                   <For each={formats}>{([id, text]) => <button class="chip chip--sm" type="button" aria-pressed={format() === id} onClick={() => setFormat(id)}>{text}</button>}</For>
@@ -317,12 +351,12 @@ function App() {
         <section class="use wrap" id="use" aria-labelledby="use-title">
           <div class="use-head">
             <h2 id="use-title">Use a theme in your app</h2>
-            <p>Link a stylesheet, set two attributes on the root element, and every variable switches with them. Market green and red are not part of a theme, because exchanges keep them fixed.</p>
+            <p>Link a stylesheet, set two attributes on the root element, and every variable switches with them: colors, fonts, radii and spacing. Market green and red are not part of a theme, because exchanges keep them fixed.</p>
           </div>
           <ul class="paths">
-            <li><code class="mono">themes.marketmaker.cc/css/<b>binance.css</b></code><p>Both modes of one theme. Set <span class="mono">data-theme="binance"</span> and <span class="mono">data-mode="dark"</span> on the root element.</p></li>
+            <li><code class="mono">themes.marketmaker.cc/css/<b>binance.css</b></code><p>One theme, both modes. Set <span class="mono">data-theme="binance"</span> and <span class="mono">data-mode="dark"</span> on the root element.</p></li>
             <li><code class="mono">themes.marketmaker.cc/css/<b>all.css</b></code><p>Every theme in one file, for apps that let people switch.</p></li>
-            <li><code class="mono">themes.marketmaker.cc/index/<b>themes.json</b></code><p>The full catalog with ids, notes, logos and palettes. Served with CORS for any origin.</p></li>
+            <li><code class="mono">themes.marketmaker.cc/index/<b>themes.json</b></code><p>The full catalog with ids, notes, logos, palettes and style tokens. Served with CORS for any origin.</p></li>
             <li><code class="mono">logos.marketmaker.cc/exchange-logos/<b>binance.jpg</b></code><p>Exchange logos come from the logos site, under the same slug as the theme. Do not copy them into your repo.</p></li>
           </ul>
         </section>

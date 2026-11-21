@@ -27,6 +27,23 @@ test('uses valid theme kinds, notes, and four-color palettes', () => {
   }
 });
 
+test('gives every theme a complete style token set', () => {
+  for (const { style } of themes) {
+    for (const key of ['font', 'fontDisplay', 'fontMono', 'fontNum'] as const) expect(style[key].trim()).not.toBe('');
+    expect(style.displayWeight).toBeGreaterThanOrEqual(100);
+    expect(style.displayWeight).toBeLessThanOrEqual(900);
+    expect(style.displayTracking).toMatch(/^-?\d+(\.\d+)?em$/);
+    expect(['none', 'uppercase']).toContain(style.displayTransform);
+    for (const radius of [style.radiusCard, style.radiusControl, style.radiusButton]) {
+      expect(Number.isInteger(radius)).toBe(true);
+      expect(radius).toBeGreaterThanOrEqual(0);
+      expect(radius).toBeLessThanOrEqual(999);
+    }
+    expect(style.space).toBeGreaterThanOrEqual(2);
+    expect(style.space).toBeLessThanOrEqual(8);
+  }
+});
+
 test.skipIf(!existsSync(agentSource))('matches the light and dark colors in the agent source', () => {
   const source = readFileSync(agentSource, 'utf8');
   const entries = source.matchAll(/\{\s*id:\s*'([a-z0-9]+)'[^{}]*?\blight:\s*\[([^\]]*)\][^{}]*?\bdark:\s*\[([^\]]*)\]/g);
